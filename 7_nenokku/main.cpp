@@ -3,6 +3,16 @@
 #include <vector>
 #include <memory>
 #include <list>
+#include <algorithm>
+#include <execution>
+
+struct WordPair {
+    std::string& word;
+    size_t idx;
+
+    WordPair(std::string& word, size_t idx) : word(word), idx(idx) {
+    }
+};
 
 void ToLower(std::string& str) {
     for (auto& s : str) {
@@ -33,11 +43,10 @@ bool PrefixFunction(std::string& word, std::string& text) {
 }
 
 int main() {
-    std::string in;
+    size_t idx = 0;
+    std::list<WordPair> words;
+    std::string in, text;
     std::getline(std::cin, in);
-
-    std::string text;
-    std::list<bool> result;
 
     while (!in.empty()) {
         auto type = in[0];
@@ -46,14 +55,19 @@ int main() {
         ToLower(word);
 
         if (type == '?') {
-            bool is_founded = PrefixFunction(word, text);
-            result.emplace_back(is_founded ? true : false);
+            WordPair word_pair{word, idx++};
+            words.emplace_back(word_pair);
         } else if (type == 'A') {
             text += word;
         }
-
-        std::getline(std::cin, in);
     }
+
+    std::vector<bool> result{words.size(), std::allocator<bool>{}};
+
+    std::for_each(std::execution::par, words.begin(), words.end(), [&](auto& word) {
+        bool is_founded = PrefixFunction(word.word, text);
+        result[word.idx] = is_founded ? true : false;
+    });
 
     for (auto& res : result) {
         std::cout << (res ? "YES" : "NO") << std::endl;
