@@ -4,14 +4,22 @@
 #include <memory>
 #include <list>
 
-void ToLower(std::string& str) {
-    for (auto& s : str) {
-        s = std::tolower(s);
+void ToLower(char* str, const size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        str[i] = std::tolower(str[i]);
     }
 }
 
-bool PrefixFunction(std::string& word, std::string& text) {
-    std::string in = word + "\n" + text;
+bool PrefixFunction(char* word, const size_t word_size, char* text, const size_t text_size) {
+    std::vector<char> in{word_size + 1 + text_size, std::allocator<char>{}};
+    for (size_t i = 0; i < word_size; ++i) {
+        in.data()[i] = word[i];
+    }
+    word[word_size] = '\n';
+    for (size_t i = 0; i < text_size; ++i) {
+        in.data()[word_size + 1 + i] = text[i];
+    }
+
     std::vector<size_t> prefix_values{in.size(), std::allocator<size_t>{}};
 
     for (size_t idx = 1; idx < in.size(); ++idx) {
@@ -21,11 +29,29 @@ bool PrefixFunction(std::string& word, std::string& text) {
         }
         if (in[next] == in[idx]) {
             prefix_values[idx] = next + 1;
-            if (prefix_values[idx] == word.size()) {
+            if (prefix_values[idx] == word_size) {
                 return true;
             }
         } else {
             prefix_values[idx] = 0;
+        }
+    }
+
+    return false;
+}
+
+bool FindInText(char* word, const size_t word_size, std::string& text) {
+    const size_t len = text.size();
+    const size_t block_size = 1024;
+    const size_t n_blocks = len / block_size + !!(len % block_size);
+
+    for (size_t i = 0; i < n_blocks; ++i) {
+        const size_t begin = i * block_size;
+        const size_t count = (begin + block_size > len) ? len - begin : block_size;
+
+        bool is_found = PrefixFunction(word, word_size, text.data() + begin, count);
+        if (is_found) {
+            return true;
         }
     }
 
@@ -41,13 +67,13 @@ int main() {
 
     while (!in.empty()) {
         auto type = in[0];
-        auto word = in.substr(2, in.size() - 2);
+        char* word = in.data() + 2;
 
-        ToLower(word);
+        ToLower(word, in.size() - 2);
 
         if (type == '?') {
-            bool is_founded = PrefixFunction(word, text);
-            result.emplace_back(is_founded ? true : false);
+            bool is_found = FindInText(word, in.size() - 2, text);
+            result.emplace_back(is_found ? true : false);
         } else if (type == 'A') {
             text += word;
         }
